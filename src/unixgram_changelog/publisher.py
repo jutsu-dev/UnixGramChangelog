@@ -28,8 +28,8 @@ class Publisher:
             if entry.published_message_id is not None:
                 message = await self.bot.edit_message_text(
                     render_entry(entry),
-                    self.channel_id,
-                    entry.published_message_id,
+                    chat_id=self.channel_id,
+                    message_id=entry.published_message_id,
                     disable_web_page_preview=True,
                 )
             else:
@@ -43,8 +43,8 @@ class Publisher:
             if entry.published_message_id is not None:
                 message = await self.bot.edit_message_text(
                     plain_entry(entry),
-                    self.channel_id,
-                    entry.published_message_id,
+                    chat_id=self.channel_id,
+                    message_id=entry.published_message_id,
                     parse_mode=None,
                     disable_web_page_preview=True,
                 )
