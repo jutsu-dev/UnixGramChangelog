@@ -1,0 +1,25 @@
+[Unit]
+Description=UnixGram Changelog Telegram bot
+After=docker.service network-online.target
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=5
+ExecStartPre=-/usr/bin/docker rm -f unixgram-changelog
+ExecStart=/usr/bin/docker run --name unixgram-changelog \
+  --env-file /etc/unixgram-changelog.env \
+  --read-only \
+  --tmpfs /tmp:rw,noexec,nosuid,size=32m \
+  --cap-drop ALL \
+  --security-opt no-new-privileges:true \
+  -v /var/lib/unixgram-changelog:/app/data \
+  unixgram-changelog:local
+ExecStop=/usr/bin/docker stop -t 15 unixgram-changelog
+TimeoutStartSec=120
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

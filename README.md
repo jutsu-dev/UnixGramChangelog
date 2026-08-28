@@ -101,6 +101,10 @@ unixgram-changelog
 docker compose up --build -d
 ```
 
+Для постоянного запуска на Linux подготовлен unit-файл
+[`deploy/unixgram-changelog.service`](deploy/unixgram-changelog.service). Секреты хранятся
+в `/etc/unixgram-changelog.env`, база данных находится в `/var/lib/unixgram-changelog`.
+
 > Никогда не добавляйте `.env`, токены, cookies или пароли в Git. Для CI и production используйте GitHub Secrets или менеджер секретов сервера.
 
 ## Редакционный интерфейс
