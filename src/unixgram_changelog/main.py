@@ -11,6 +11,7 @@ from aiogram.exceptions import TelegramAPIError
 from aiogram.types import BotCommand, BotCommandScopeChat, BotCommandScopeDefault
 
 from .access import OwnerOnlyMiddleware
+from .archive import ArchiveSettings, GitHubArchive
 from .bot import create_router
 from .config import Settings
 from .ingestion import IngestionService
@@ -133,6 +134,14 @@ async def main() -> None:
         await configure_bot(bot, settings.owner_id)
     publisher = Publisher(bot, repository, settings.channel_id)
     notifier = AdminNotifier(bot, settings.admin_ids)
+    archiver = GitHubArchive(
+        ArchiveSettings(
+            repository=settings.github_repository,
+            branch=settings.github_branch,
+            directory=settings.github_archive_directory,
+            token=settings.github_token,
+        )
+    )
     sources = build_default_sources(repository, settings.source_timeout_seconds)
     await sync_source_catalog(repository, sources)
     ingestion = IngestionService(
@@ -140,6 +149,7 @@ async def main() -> None:
         sources,
         publisher=publisher,
         notifier=notifier,
+        archiver=archiver,
         review_required=settings.review_required,
     )
     dispatcher = Dispatcher()

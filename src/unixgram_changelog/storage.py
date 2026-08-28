@@ -42,7 +42,10 @@ class Repository:
                     kind TEXT NOT NULL,
                     source_name TEXT NOT NULL,
                     source_url TEXT,
+                    archive_label TEXT,
+                    archive_url TEXT,
                     source_slug TEXT,
+                    changed_files_json TEXT NOT NULL DEFAULT '[]',
                     evidence TEXT,
                     version TEXT,
                     occurred_at TEXT,
@@ -78,7 +81,13 @@ class Repository:
         rows = await db.execute_fetchall("PRAGMA table_info(entries)")
         columns = {row[1] for row in rows}
         migrations = {
+            "archive_label": "ALTER TABLE entries ADD COLUMN archive_label TEXT",
+            "archive_url": "ALTER TABLE entries ADD COLUMN archive_url TEXT",
             "source_slug": "ALTER TABLE entries ADD COLUMN source_slug TEXT",
+            "changed_files_json": (
+                "ALTER TABLE entries ADD COLUMN changed_files_json "
+                "TEXT NOT NULL DEFAULT '[]'"
+            ),
             "evidence": "ALTER TABLE entries ADD COLUMN evidence TEXT",
             "tags_json": "ALTER TABLE entries ADD COLUMN tags_json TEXT NOT NULL DEFAULT '[]'",
         }
@@ -104,7 +113,10 @@ class Repository:
                     kind,
                     source_name,
                     source_url,
+                    archive_label,
+                    archive_url,
                     source_slug,
+                    changed_files_json,
                     evidence,
                     version,
                     occurred_at,
@@ -112,7 +124,7 @@ class Repository:
                     status,
                     created_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     fingerprint,
@@ -122,7 +134,10 @@ class Repository:
                     entry.kind.value,
                     entry.source_name,
                     entry.source_url,
+                    entry.archive_label,
+                    entry.archive_url,
                     entry.source_slug,
+                    json.dumps(list(entry.changed_files), ensure_ascii=True),
                     entry.evidence,
                     entry.version,
                     entry.occurred_at.isoformat() if entry.occurred_at else None,
@@ -135,6 +150,27 @@ class Repository:
             if cursor.rowcount == 0:
                 return None
             return replace(entry, id=cursor.lastrowid, status=status)
+
+    async def update_render_fields(self, entry: ChangeEntry) -> ChangeEntry:
+        if entry.id is None:
+            raise ValueError("Entry must have an id before updating render fields")
+        async with aiosqlite.connect(self.path) as db:
+            await db.execute(
+                """
+                UPDATE entries
+                SET archive_label = ?, archive_url = ?, changed_files_json = ?, evidence = ?
+                WHERE id = ?
+                """,
+                (
+                    entry.archive_label,
+                    entry.archive_url,
+                    json.dumps(list(entry.changed_files), ensure_ascii=True),
+                    entry.evidence,
+                    entry.id,
+                ),
+            )
+            await db.commit()
+        return entry
 
     async def get(self, entry_id: int) -> ChangeEntry | None:
         async with aiosqlite.connect(self.path) as db:
@@ -261,7 +297,14 @@ class Repository:
             kind=ChangeKind(row["kind"]),
             source_name=row["source_name"],
             source_url=row["source_url"],
+            archive_label=row["archive_label"] if "archive_label" in row.keys() else None,
+            archive_url=row["archive_url"] if "archive_url" in row.keys() else None,
             source_slug=row["source_slug"] if "source_slug" in row.keys() else None,
+            changed_files=tuple(
+                json.loads(
+                    row["changed_files_json"] if "changed_files_json" in row.keys() else "[]"
+                )
+            ),
             evidence=row["evidence"] if "evidence" in row.keys() else None,
             version=row["version"],
             occurred_at=datetime.fromisoformat(row["occurred_at"]) if row["occurred_at"] else None,

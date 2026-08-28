@@ -16,6 +16,7 @@ from .base import Detection
 _ASSET_PATTERN = re.compile(
     r'(?:src|href)=["\']([^"\']+_next/static/[^"\']+\.(?:js|css)(?:\?[^"\']*)?)["\']'
 )
+_HASHED_ASSET_PATTERN = re.compile(r"^(?P<name>.+)-[0-9a-f]{8,}(?P<ext>\.(?:js|css))$")
 
 
 def _digest(value: object) -> str:
@@ -31,6 +32,22 @@ def _shape(value: object) -> object:
     if value is None:
         return "null"
     return type(value).__name__
+
+
+def _display_asset_name(filename: str) -> str:
+    match = _HASHED_ASSET_PATTERN.match(filename)
+    if not match:
+        return filename
+    return f"{match.group('name')}{match.group('ext')}"
+
+
+def _pick_changed_files(added: list[str], removed: list[str]) -> tuple[str, ...]:
+    unique: list[str] = []
+    for item in (*added[:2], *removed[:2]):
+        normalized = _display_asset_name(item)
+        if normalized not in unique:
+            unique.append(normalized)
+    return tuple(unique)
 
 
 @dataclass(slots=True)
@@ -62,31 +79,36 @@ class NextDeploymentSource:
         if previous_raw is None:
             return []
         previous = json.loads(previous_raw)
+        old_assets = set(previous.get("assets", []))
         if previous.get("fingerprint") == fingerprint:
             return []
-        old_assets = set(previous.get("assets", []))
+
+        new_assets = set(assets)
         added = [item.rsplit("/", 1)[-1] for item in assets if item not in old_assets]
-        removed = [item.rsplit("/", 1)[-1] for item in old_assets if item not in set(assets)]
-        changed_files = added[:5] + removed[:5]
+        removed = [item.rsplit("/", 1)[-1] for item in old_assets if item not in new_assets]
+        changed_files = _pick_changed_files(added, removed)
         evidence_lines = [
-            f"Сборка: {str(previous.get('fingerprint', ''))[:12]} → {fingerprint[:12]}",
-            f"Добавлено: {len(added)} · заменено: {len(removed)}",
+            f"build {str(previous.get('fingerprint', ''))[:12]} -> {fingerprint[:12]}",
+            f"added: {len(added)}",
+            f"removed: {len(removed)}",
         ]
         if changed_files:
-            evidence_lines.append("Ресурсы: " + ", ".join(changed_files))
+            evidence_lines.append("files: " + ", ".join(changed_files))
         evidence = "\n".join(evidence_lines)
         entry = ChangeEntry(
-            title=f"Обновилась веб-версия {self.name}",
+            title=f"{self.name}: новая сборка",
             summary=(
-                "Сайт получил новую сборку. Изменения проходят проверку перед публикацией."
+                "Обновился набор клиентских ресурсов. Проверяем интерфейс и функции "
+                "перед публикацией подробного описания."
             ),
             kind=ChangeKind.TECHNICAL,
             source_name=self.name,
             source_url=self.base_url,
             source_slug=self.slug,
             external_id=f"{self.slug}:{fingerprint}",
+            changed_files=changed_files,
             evidence=evidence,
-            tags=("deploy",),
+            tags=("deploy", "web"),
         )
         return [Detection(entry=entry, confidence=0.98, evidence=evidence)]
 
@@ -123,6 +145,6 @@ class JsonContractSource:
             source_slug=self.slug,
             external_id=f"{self.slug}:{fingerprint}",
             evidence=evidence,
-            tags=("api",),
+            tags=("api", "contract"),
         )
         return [Detection(entry=entry, confidence=0.99, evidence=evidence)]

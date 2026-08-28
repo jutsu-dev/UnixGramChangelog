@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, replace
 
+from .archive import GitHubArchive
 from .models import ChangeEntry, EntryStatus, SourceMode
 from .notifications import AdminNotifier
 from .publisher import Publisher
@@ -26,12 +27,14 @@ class IngestionService:
         sources: list[ChangeSource],
         publisher: Publisher | None = None,
         notifier: AdminNotifier | None = None,
+        archiver: GitHubArchive | None = None,
         review_required: bool = True,
     ) -> None:
         self.repository = repository
         self.sources = sources
         self.publisher = publisher
         self.notifier = notifier
+        self.archiver = archiver
         self.review_required = review_required
 
     async def collect(self) -> CollectReport:
@@ -77,6 +80,16 @@ class IngestionService:
                 if saved is None:
                     duplicates += 1
                     continue
+                if self.archiver is not None:
+                    try:
+                        saved = await self.archiver.archive(saved)
+                        saved = await self.repository.update_render_fields(saved)
+                    except Exception:
+                        logger.exception(
+                            "Archive update failed for source %s entry %s",
+                            source.slug,
+                            saved.id,
+                        )
                 accepted.append(saved)
                 if status is EntryStatus.PUBLISHED and self.publisher is not None:
                     try:

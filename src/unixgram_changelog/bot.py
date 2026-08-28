@@ -6,7 +6,7 @@ from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
 
-from .formatting import KIND_META, is_valid_source_url, render_entry
+from .formatting import KIND_META, is_valid_source_url, render_review_card
 from .models import ChangeEntry, ChangeKind, EntryStatus
 from .notifications import AdminNotifier
 from .publisher import Publisher
@@ -14,8 +14,12 @@ from .storage import Repository
 from .ui import answer_card, icon, main_menu, review_menu
 
 
-def review_keyboard(entry_id: int) -> InlineKeyboardMarkup:
-    return review_menu(entry_id)
+def review_keyboard(entry: ChangeEntry) -> InlineKeyboardMarkup:
+    return review_menu(
+        entry.id or 0,
+        source_url=entry.source_url if is_valid_source_url(entry.source_url) else None,
+        archive_url=entry.archive_url if is_valid_source_url(entry.archive_url) else None,
+    )
 
 
 def create_router(
@@ -41,8 +45,7 @@ def create_router(
             message,
             f"{icon('home')} <b>UnixGram Changelog</b>\n"
             "<blockquote>закрытая редакционная панель</blockquote>\n\n"
-            "Находки проходят проверку перед публикацией. "
-            "Источник обязателен, повторы отсекаются автоматически.\n\n"
+            "Новые находки попадают в очередь. После проверки запись можно выпустить в канал.\n\n"
             f"{icon('lock')} доступ открыт только владельцу",
             reply_markup=main_menu(),
             disable_web_page_preview=True,
@@ -115,13 +118,13 @@ def create_router(
             await message.answer("Такая запись уже есть в истории или очереди.")
             return
         await message.answer(
-            "<b>Предпросмотр</b>\n\n" + render_entry(saved),
-            reply_markup=review_keyboard(saved.id or 0),
+            render_review_card(saved),
+            reply_markup=review_keyboard(saved),
             disable_web_page_preview=True,
         )
         await notifier.notify_review_entry(
             saved,
-            reply_markup=review_keyboard(saved.id or 0),
+            reply_markup=review_keyboard(saved),
             skip_chat_id=message.chat.id,
         )
 
@@ -137,12 +140,12 @@ def create_router(
         await answer_card(
             message,
             f"{icon('queue')} <b>На проверке: {len(entries)}</b>\n"
-            "<blockquote>проверьте формулировку и источник</blockquote>"
+            "<blockquote>проверь формулировку, источник и GitHub-архив</blockquote>"
         )
         for entry in entries:
             await message.answer(
-                render_entry(entry),
-                reply_markup=review_keyboard(entry.id or 0),
+                render_review_card(entry),
+                reply_markup=review_keyboard(entry),
                 disable_web_page_preview=True,
             )
 

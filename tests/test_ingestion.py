@@ -3,6 +3,7 @@ from typing import Any, cast
 
 import pytest
 
+from unixgram_changelog.archive import ArchiveSettings, GitHubArchive
 from unixgram_changelog.ingestion import IngestionService
 from unixgram_changelog.models import ChangeEntry, ChangeKind, SourceRecord
 from unixgram_changelog.notifications import AdminNotifier
@@ -51,6 +52,33 @@ class CountingSource(WorkingSource):
     async def collect(self) -> list[Detection]:
         self.collect_calls += 1
         return await super().collect()
+
+
+class StubArchiver(GitHubArchive):
+    def __init__(self) -> None:
+        super().__init__(ArchiveSettings("jutsu-dev/UnixGramChangelog", "main", "archive"))
+
+    async def archive(self, entry: ChangeEntry) -> ChangeEntry:
+        return ChangeEntry(
+            title=entry.title,
+            summary=entry.summary,
+            kind=entry.kind,
+            source_name=entry.source_name,
+            source_url=entry.source_url,
+            archive_label="jutsu-dev/UnixGramChangelog@abc1234",
+            archive_url="https://github.com/jutsu-dev/UnixGramChangelog/blob/main/archive/test.md",
+            changed_files=("layout.js",),
+            evidence=entry.evidence,
+            version=entry.version,
+            occurred_at=entry.occurred_at,
+            external_id=entry.external_id,
+            tags=entry.tags,
+            source_slug=entry.source_slug,
+            id=entry.id,
+            status=entry.status,
+            published_message_id=entry.published_message_id,
+            created_at=entry.created_at,
+        )
 
 
 @pytest.mark.asyncio
@@ -105,6 +133,21 @@ async def test_detection_evidence_is_persisted_when_entry_omits_it(tmp_path: Pat
 
     assert len(report.accepted) == 1
     assert report.accepted[0].evidence == "fixture"
+
+
+@pytest.mark.asyncio
+async def test_archiver_updates_entry_before_notification(tmp_path: Path) -> None:
+    repository = Repository(tmp_path / "changelog.db")
+    await repository.initialize()
+    service = IngestionService(repository, [WorkingSource()], archiver=StubArchiver())
+
+    report = await service.collect()
+
+    assert len(report.accepted) == 1
+    assert report.accepted[0].archive_label == "jutsu-dev/UnixGramChangelog@abc1234"
+    stored = await repository.get(report.accepted[0].id or 0)
+    assert stored is not None
+    assert stored.changed_files == ("layout.js",)
 
 
 @pytest.mark.asyncio

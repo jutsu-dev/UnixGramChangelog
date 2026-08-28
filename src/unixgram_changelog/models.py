@@ -49,6 +49,9 @@ class ChangeEntry:
     kind: ChangeKind
     source_name: str
     source_url: str | None = None
+    archive_label: str | None = None
+    archive_url: str | None = None
+    changed_files: tuple[str, ...] = ()
     evidence: str | None = None
     version: str | None = None
     occurred_at: datetime | None = None

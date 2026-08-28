@@ -33,8 +33,6 @@ async def answer_card(
     reply_markup: InlineKeyboardMarkup | None = None,
     disable_web_page_preview: bool | None = None,
 ) -> Message:
-    """Send premium emoji when available, then retry with normal emoji."""
-
     try:
         return await message.answer(
             text,
@@ -65,13 +63,24 @@ def main_menu() -> InlineKeyboardMarkup:
     )
 
 
-def review_menu(entry_id: int) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(text="✅ Опубликовать", callback_data=f"publish:{entry_id}"),
-                InlineKeyboardButton(text="❌ Отклонить", callback_data=f"reject:{entry_id}"),
-            ],
-            [InlineKeyboardButton(text="↩️ В меню", callback_data="menu:home")],
+def review_menu(
+    entry_id: int,
+    *,
+    source_url: str | None = None,
+    archive_url: str | None = None,
+) -> InlineKeyboardMarkup:
+    keyboard: list[list[InlineKeyboardButton]] = [
+        [
+            InlineKeyboardButton(text="✅ Опубликовать", callback_data=f"publish:{entry_id}"),
+            InlineKeyboardButton(text="❌ Отклонить", callback_data=f"reject:{entry_id}"),
         ]
-    )
+    ]
+    links: list[InlineKeyboardButton] = []
+    if source_url:
+        links.append(InlineKeyboardButton(text="Открыть источник", url=source_url))
+    if archive_url:
+        links.append(InlineKeyboardButton(text="Открыть GitHub", url=archive_url))
+    if links:
+        keyboard.append(links)
+    keyboard.append([InlineKeyboardButton(text="↩️ В меню", callback_data="menu:home")])
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
