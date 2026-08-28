@@ -21,7 +21,7 @@ LockPersonality=yes
 RestrictSUIDSGID=yes
 SystemCallArchitectures=native
 EnvironmentFile=/etc/unixgram-changelog.env
-ExecStartPre=-/usr/bin/docker rm -f unixgram-changelog
+ExecStartPre=/bin/sh -c '/usr/bin/docker rm -f unixgram-changelog >/dev/null 2>&1 || true'
 ExecStart=/usr/bin/docker run --name unixgram-changelog --rm \
     --env-file /etc/unixgram-changelog.env \
     --pull never \
