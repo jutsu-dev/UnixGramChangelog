@@ -108,13 +108,13 @@ def render_entry(entry: ChangeEntry) -> str:
         f"<b>{escape(_maybe_trim(entry.title, 140))}</b>",
     ]
     if details:
-        lines.extend(("", " · ".join(details)))
+        lines.extend(("", f"<blockquote>{' · '.join(details)}</blockquote>"))
+
+    lines.extend(("", escape(_maybe_trim(entry.summary, 900))))
 
     changed_files = _render_changed_files(entry)
     if changed_files:
         lines.extend(("", *changed_files))
-    else:
-        lines.extend(("", escape(_maybe_trim(entry.summary, 900))))
 
     archive_row = _render_archive_row(entry)
     if archive_row:
@@ -133,13 +133,13 @@ def plain_entry(entry: ChangeEntry) -> str:
     parts = [
         f"{code} | {label}",
         entry.title,
+        "",
+        entry.summary,
     ]
     if entry.changed_files:
         parts.extend(("", *entry.changed_files[:4]))
         if len(entry.changed_files) > 4:
             parts.append(f"+{len(entry.changed_files) - 4} more files")
-    else:
-        parts.extend(("", entry.summary))
     if entry.archive_label:
         parts.extend(("", f"github: {entry.archive_label}"))
     elif entry.archive_url:
@@ -162,13 +162,13 @@ def render_review_card(entry: ChangeEntry) -> str:
     lines = [
         f"<b>{escape(_maybe_trim(entry.title, 140))}</b>",
         f"<blockquote>{code} {escape(label)} · {escape(entry.source_name)} · #{tag}</blockquote>",
+        "",
+        escape(_maybe_trim(entry.summary, 720)),
     ]
 
     changed_files = _render_changed_files(entry)
     if changed_files:
         lines.extend(("", *changed_files))
-    else:
-        lines.extend(("", escape(_maybe_trim(entry.summary, 720))))
 
     archive_row = _render_archive_row(entry)
     if archive_row:
@@ -191,13 +191,13 @@ def plain_review_card(entry: ChangeEntry) -> str:
     rows = [
         entry.title,
         f"{code} {label} · {entry.source_name} · #{tag}",
+        "",
+        entry.summary,
     ]
     if entry.changed_files:
         rows.extend(("", *entry.changed_files[:4]))
         if len(entry.changed_files) > 4:
             rows.append(f"+{len(entry.changed_files) - 4} more files")
-    else:
-        rows.extend(("", entry.summary))
     if entry.archive_url:
         rows.extend(("", f"github: {entry.archive_url}"))
     if entry.source_url:
