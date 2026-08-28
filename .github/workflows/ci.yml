@@ -24,7 +24,9 @@ jobs:
     if: >-
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
-      !contains(github.event.head_commit.message, '[snapshot]')
+      !contains(github.event.head_commit.message, '[snapshot]') &&
+      !contains(github.event.head_commit.message, '[unixgram]') &&
+      !contains(github.event.head_commit.message, '[unixplace]')
     needs: quality
     runs-on: ubuntu-latest
     environment: production
