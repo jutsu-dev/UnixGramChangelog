@@ -208,11 +208,18 @@ class GitHubSnapshotSource:
             title=f"Новые изменения {subject}",
             summary="Обновился снимок веб-ресурсов. Изменения сохранены в GitHub.",
             kind=ChangeKind.TECHNICAL,
-            source_name=f"GitHub · {self.repository_name}@{sha[:7]}",
-            source_url=html_url,
+            source_name=subject,
+            source_url=(
+                "https://place.unixgram.com/"
+                if subject == "UnixPlace"
+                else "https://unixgram.com/"
+            ),
             source_slug=self.slug,
             external_id=f"github-snapshot:{sha}",
             evidence=evidence,
             tags=("web",),
+            archive_label=f"{self.repository_name}@{sha[:7]}",
+            archive_url=html_url,
+            changed_files=tuple(shown_files),
         )
         return [Detection(entry=entry, confidence=1.0, evidence=evidence)]

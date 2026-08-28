@@ -137,8 +137,11 @@ async def test_github_snapshot_source_links_new_commit(
     detections = await source.collect()
 
     assert len(detections) == 1
-    assert detections[0].entry.source_url == second["html_url"]
-    assert detections[0].entry.source_name.endswith("@bbbbbbb")
+    assert detections[0].entry.source_url == "https://unixgram.com/"
+    assert detections[0].entry.source_name == "UnixGram"
+    assert detections[0].entry.archive_url == second["html_url"]
+    assert detections[0].entry.archive_label == "example/repo@bbbbbbb"
+    assert detections[0].entry.changed_files == ("unixgram/chunks/app/layout.json",)
     assert "unixgram/chunks/app/layout.json" in detections[0].evidence
 
 

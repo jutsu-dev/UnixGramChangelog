@@ -73,6 +73,10 @@ class GitHubArchive:
         )
 
     def _fallback(self, entry: ChangeEntry) -> ChangeEntry:
+        # Some sources already point at the exact GitHub commit that produced
+        # the change. Never replace that stronger reference with the repo root.
+        if entry.archive_url:
+            return entry
         return replace(
             entry,
             archive_label=self.settings.repository,
