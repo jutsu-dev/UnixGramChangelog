@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from .models import ChangeEntry, EntryStatus, SourceMode
 from .notifications import AdminNotifier
@@ -44,6 +44,10 @@ class IngestionService:
         }
 
         for source in self.sources:
+            source_record = source_map.get(source.slug)
+            if source_record is not None and not source_record.enabled:
+                logger.info("Skipping disabled source: %s", source.slug)
+                continue
             try:
                 detections = await source.collect()
             except Exception:
@@ -51,8 +55,10 @@ class IngestionService:
                 source_failures.append(source.name)
                 continue
 
-            source_record = source_map.get(source.slug)
             for detection in detections:
+                entry = detection.entry
+                if entry.evidence is None and detection.evidence:
+                    entry = replace(entry, evidence=detection.evidence)
                 status = EntryStatus.REVIEW
                 if (
                     not self.review_required
@@ -65,7 +71,7 @@ class IngestionService:
                     status = EntryStatus.PUBLISHED
 
                 saved = await self.repository.add(
-                    detection.entry,
+                    entry,
                     EntryStatus.REVIEW if status is EntryStatus.PUBLISHED else status,
                 )
                 if saved is None:
@@ -73,7 +79,21 @@ class IngestionService:
                     continue
                 accepted.append(saved)
                 if status is EntryStatus.PUBLISHED and self.publisher is not None:
-                    await self.publisher.publish(saved)
+                    try:
+                        await self.publisher.publish(saved)
+                    except Exception:
+                        logger.exception(
+                            "Auto publish failed for source %s entry %s",
+                            source.slug,
+                            saved.id,
+                        )
+                        if self.notifier is not None:
+                            await self.notifier.notify_review_entry(
+                                saved,
+                                heading=(
+                                    f"Автопубликация не удалась, проверь вручную: {source.name}"
+                                ),
+                            )
                 elif self.notifier is not None:
                     await self.notifier.notify_review_entry(
                         saved,

@@ -35,7 +35,7 @@ def test_unsafe_source_scheme_is_not_linked() -> None:
         source_url="javascript:alert(1)",
     ))
     assert "javascript:" not in text
-    assert "источник: Source" in text
+    assert "🔗 Source" in text
     assert not is_valid_source_url("javascript:alert(1)")
     assert is_valid_source_url("https://unixgram.com/changelog/1")
 

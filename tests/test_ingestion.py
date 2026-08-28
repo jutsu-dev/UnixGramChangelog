@@ -1,9 +1,10 @@
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 
 from unixgram_changelog.ingestion import IngestionService
-from unixgram_changelog.models import ChangeEntry, ChangeKind
+from unixgram_changelog.models import ChangeEntry, ChangeKind, SourceRecord
 from unixgram_changelog.notifications import AdminNotifier
 from unixgram_changelog.sources import Detection
 from unixgram_changelog.storage import Repository
@@ -43,6 +44,15 @@ class DummyBot:
         self.calls.append((chat_id, text))
 
 
+class CountingSource(WorkingSource):
+    def __init__(self) -> None:
+        self.collect_calls = 0
+
+    async def collect(self) -> list[Detection]:
+        self.collect_calls += 1
+        return await super().collect()
+
+
 @pytest.mark.asyncio
 async def test_source_failure_does_not_stop_other_sources(tmp_path: Path) -> None:
     repository = Repository(tmp_path / "changelog.db")
@@ -74,11 +84,38 @@ async def test_second_collection_is_deduplicated(tmp_path: Path) -> None:
 async def test_new_detection_notifies_admins(tmp_path: Path) -> None:
     repository = Repository(tmp_path / "changelog.db")
     await repository.initialize()
-    notifier = AdminNotifier(bot=DummyBot(), admin_ids=frozenset({6089346880}))
+    bot = DummyBot()
+    notifier = AdminNotifier(bot=cast(Any, bot), admin_ids=frozenset({6089346880}))
     service = IngestionService(repository, [WorkingSource()], notifier=notifier)
 
     report = await service.collect()
 
     assert len(report.accepted) == 1
-    assert notifier.bot.calls[0][0] == 6089346880
-    assert "Источник Working source прислал новое изменение" in notifier.bot.calls[0][1]
+    assert bot.calls[0][0] == 6089346880
+    assert "Источник Working source прислал новое изменение" in bot.calls[0][1]
+
+
+@pytest.mark.asyncio
+async def test_detection_evidence_is_persisted_when_entry_omits_it(tmp_path: Path) -> None:
+    repository = Repository(tmp_path / "changelog.db")
+    await repository.initialize()
+    service = IngestionService(repository, [WorkingSource()])
+
+    report = await service.collect()
+
+    assert len(report.accepted) == 1
+    assert report.accepted[0].evidence == "fixture"
+
+
+@pytest.mark.asyncio
+async def test_disabled_source_is_skipped_before_collection(tmp_path: Path) -> None:
+    repository = Repository(tmp_path / "changelog.db")
+    await repository.initialize()
+    await repository.save_source(SourceRecord(slug="working", name="Working source", enabled=False))
+    source = CountingSource()
+    service = IngestionService(repository, [source])
+
+    report = await service.collect()
+
+    assert source.collect_calls == 0
+    assert not report.accepted

@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     database_path: Path = Path("data/changelog.db")
     log_level: str = "INFO"
     review_required: bool = True
+    ingestion_enabled: bool = True
+    ingestion_interval_seconds: int = Field(default=300, ge=60, le=86400)
+    source_timeout_seconds: float = Field(default=12.0, ge=2.0, le=30.0)
+    configure_bot_on_startup: bool = False
 
     @field_validator("admin_ids", mode="before")
     @classmethod

@@ -62,6 +62,13 @@ class Repository:
                     confidence_threshold REAL NOT NULL DEFAULT 0.9,
                     created_at TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS source_state (
+                    source_slug TEXT NOT NULL,
+                    state_key TEXT NOT NULL,
+                    state_value TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    PRIMARY KEY (source_slug, state_key)
+                );
                 """
             )
             await self._migrate_entries_table(db)
@@ -213,6 +220,36 @@ class Repository:
                 await db.execute_fetchall("SELECT * FROM sources WHERE slug = ?", (slug,))
             )
         return self._source_from_row(rows[0]) if rows else None
+
+    async def get_source_state(self, source_slug: str, state_key: str) -> str | None:
+        async with aiosqlite.connect(self.path) as db:
+            rows = list(
+                await db.execute_fetchall(
+                    "SELECT state_value FROM source_state WHERE source_slug = ? AND state_key = ?",
+                    (source_slug, state_key),
+                )
+            )
+        return str(rows[0][0]) if rows else None
+
+    async def set_source_state(
+        self,
+        source_slug: str,
+        state_key: str,
+        state_value: str,
+    ) -> None:
+        now = datetime.now(UTC).isoformat()
+        async with aiosqlite.connect(self.path) as db:
+            await db.execute(
+                """
+                INSERT INTO source_state (source_slug, state_key, state_value, updated_at)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(source_slug, state_key) DO UPDATE SET
+                    state_value = excluded.state_value,
+                    updated_at = excluded.updated_at
+                """,
+                (source_slug, state_key, state_value, now),
+            )
+            await db.commit()
 
     @staticmethod
     def _entry_from_row(row: aiosqlite.Row) -> ChangeEntry:

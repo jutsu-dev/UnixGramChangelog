@@ -59,25 +59,21 @@ def _maybe_trim(text: str, limit: int) -> str:
 def render_entry(entry: ChangeEntry) -> str:
     code, label, tag = KIND_META[entry.kind]
     all_tags = normalize_tags((*entry.tags, tag, "unixgramchangelog"))
-    details: list[str] = [f"{code} · {label}"]
+    details: list[str] = [f"{code} {label}"]
     if entry.version:
         details.append(f"v{escape(entry.version)}")
     if entry.occurred_at:
         details.append(entry.occurred_at.strftime("%d.%m.%Y"))
-    if entry.external_id:
-        details.append(f"id {escape(entry.external_id[:48])}")
 
     lines = [
-        f"<blockquote>{' | '.join(details)}</blockquote>",
+        "<b>UnixGram Changelog</b>",
         f"<b>{escape(_maybe_trim(entry.title, 140))}</b>",
+        f"<blockquote>{' · '.join(details)}</blockquote>",
         "",
         escape(_maybe_trim(entry.summary, 2400)),
         "",
-        f"источник: {_render_source(entry.source_name, entry.source_url)}",
+        f"🔗 {_render_source(entry.source_name, entry.source_url)}",
     ]
-
-    if entry.evidence:
-        lines.append(f"подтверждение: {escape(_maybe_trim(entry.evidence, 280))}")
 
     if all_tags:
         rendered_tags = [
@@ -115,41 +111,32 @@ def plain_entry(entry: ChangeEntry) -> str:
 
 def render_review_card(entry: ChangeEntry) -> str:
     _, label, tag = KIND_META[entry.kind]
-    meta = [
-        f"status: {entry.status.value}",
-        f"kind: {label}",
-        f"tag: #{tag}",
-        f"source: {escape(entry.source_name)}",
+    review = [
+        "<b>Найдено новое изменение</b>",
+        f"{escape(entry.source_name)} · {escape(label)} · #{tag}",
+        "",
+        render_entry(entry),
     ]
-    if entry.source_slug:
-        meta.append(f"source_id: <code>{escape(entry.source_slug)}</code>")
-    if entry.external_id:
-        meta.append(f"external_id: <code>{escape(entry.external_id)}</code>")
-    if entry.tags:
-        meta.append(
-            "extra_tags: " + " ".join(f"#{item}" for item in normalize_tags(entry.tags))
+    if entry.evidence:
+        review.extend(
+            (
+                "",
+                "<blockquote expandable><b>Технические данные</b>\n"
+                f"{escape(_maybe_trim(entry.evidence, 700))}</blockquote>",
+            )
         )
-    return "<b>Review preview</b>\n\n" + "\n".join(meta) + "\n\n" + render_entry(entry)
+    return "\n".join(review)
 
 
 def plain_review_card(entry: ChangeEntry) -> str:
     _, label, tag = KIND_META[entry.kind]
     rows = [
-        "Review preview",
-        f"status: {entry.status.value}",
-        f"kind: {label}",
-        f"tag: #{tag}",
-        f"source: {entry.source_name}",
+        "Найдено новое изменение",
+        f"{entry.source_name} · {label} · #{tag}",
     ]
-    if entry.source_slug:
-        rows.append(f"source_id: {entry.source_slug}")
-    if entry.external_id:
-        rows.append(f"external_id: {entry.external_id}")
-    if entry.tags:
-        rows.append(
-            "extra_tags: " + " ".join(f"#{item}" for item in normalize_tags(entry.tags))
-        )
     rows.extend(("", plain_entry(entry)))
+    if entry.evidence:
+        rows.extend(("", "Технические данные", _maybe_trim(entry.evidence, 700)))
     return "\n".join(rows)
 
 
