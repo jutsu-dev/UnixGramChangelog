@@ -18,9 +18,8 @@ async def test_sync_source_catalog_bootstraps_default_sources(tmp_path: Path) ->
     stored = await repository.list_sources()
 
     assert [source.slug for source in stored] == [
-        "unixgram-web",
+        "github-web-snapshots",
         "unixplace-lots-contract",
-        "unixplace-web",
     ]
     assert stored[0].default_kind is ChangeKind.TECHNICAL
     assert stored[1].default_kind is ChangeKind.API
@@ -32,7 +31,7 @@ async def test_sync_source_catalog_preserves_owner_toggles(tmp_path: Path) -> No
     await repository.initialize()
     await repository.save_source(
         SourceRecord(
-            slug="unixgram-web",
+            slug="github-web-snapshots",
             name="Old name",
             url="https://old.example/",
             notes="old notes",
@@ -46,11 +45,11 @@ async def test_sync_source_catalog_preserves_owner_toggles(tmp_path: Path) -> No
     sources = build_default_sources(repository, 12.0)
     await sync_source_catalog(repository, sources)
 
-    stored = await repository.get_source("unixgram-web")
+    stored = await repository.get_source("github-web-snapshots")
 
     assert stored is not None
-    assert stored.name == "UnixGram"
-    assert stored.url == "https://unixgram.com/"
+    assert stored.name == "GitHub snapshots"
+    assert stored.url is None
     assert stored.mode is SourceMode.AUTO
     assert stored.enabled is False
     assert stored.default_kind is ChangeKind.IMPORTANT

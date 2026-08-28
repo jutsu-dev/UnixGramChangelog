@@ -8,7 +8,7 @@ from unixgram_changelog.archive import ArchiveSettings, GitHubArchive
 from unixgram_changelog.ingestion import IngestionService
 from unixgram_changelog.notifications import AdminNotifier
 from unixgram_changelog.sources import Detection
-from unixgram_changelog.sources.web import NextDeploymentSource
+from unixgram_changelog.sources.web import GitHubSnapshotSource, NextDeploymentSource
 from unixgram_changelog.storage import Repository
 
 
@@ -48,6 +48,21 @@ class FakeSession:
 
     def get(self, *_: object, **__: object) -> FakeResponse:
         return FakeResponse(self.bodies.pop(0))
+
+
+class FakeJsonResponse(FakeResponse):
+    def __init__(self, payload: object) -> None:
+        self.payload = payload
+
+    async def json(self) -> object:
+        return self.payload
+
+
+class FakeJsonSession(FakeSession):
+    payloads: ClassVar[list[object]] = []
+
+    def get(self, *_: object, **__: object) -> FakeJsonResponse:
+        return FakeJsonResponse(self.payloads.pop(0))
 
 
 class DummyBot:
@@ -99,6 +114,32 @@ async def test_source_state_survives_repository_reopen(tmp_path: Path) -> None:
     await reopened.initialize()
 
     assert await reopened.get_source_state("web", "assets") == '{"fingerprint": "abc"}'
+
+
+@pytest.mark.asyncio
+async def test_github_snapshot_source_links_new_commit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repository = Repository(tmp_path / "changelog.db")
+    await repository.initialize()
+    first = {"sha": "a" * 40, "html_url": "https://github.com/example/repo/commit/aaa"}
+    second = {"sha": "b" * 40, "html_url": "https://github.com/example/repo/commit/bbb"}
+    FakeJsonSession.payloads = [
+        [first],
+        [second],
+        {"files": [{"filename": "data/snapshots/unixgram/chunks/app/layout.json"}]},
+    ]
+    monkeypatch.setattr("unixgram_changelog.sources.web.aiohttp.ClientSession", FakeJsonSession)
+    source = GitHubSnapshotSource(repository, repository_name="example/repo")
+
+    assert await source.collect() == []
+    detections = await source.collect()
+
+    assert len(detections) == 1
+    assert detections[0].entry.source_url == second["html_url"]
+    assert detections[0].entry.source_name.endswith("@bbbbbbb")
+    assert "unixgram/chunks/app/layout.json" in detections[0].evidence
 
 
 class StaticSource:

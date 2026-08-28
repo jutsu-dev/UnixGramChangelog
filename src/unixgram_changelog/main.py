@@ -18,7 +18,7 @@ from .ingestion import IngestionService
 from .models import ChangeKind, SourceRecord
 from .notifications import AdminNotifier
 from .publisher import Publisher
-from .sources import ChangeSource, JsonContractSource, NextDeploymentSource
+from .sources import ChangeSource, GitHubSnapshotSource, JsonContractSource, NextDeploymentSource
 from .storage import Repository
 
 logger = logging.getLogger(__name__)
@@ -46,20 +46,7 @@ def build_default_sources(
     timeout_seconds: float,
 ) -> list[ChangeSource]:
     return [
-        NextDeploymentSource(
-            repository,
-            "unixgram-web",
-            "UnixGram",
-            "https://unixgram.com/",
-            timeout_seconds,
-        ),
-        NextDeploymentSource(
-            repository,
-            "unixplace-web",
-            "UnixPlace",
-            "https://place.unixgram.com/",
-            timeout_seconds,
-        ),
+        GitHubSnapshotSource(repository=repository, timeout_seconds=timeout_seconds),
         JsonContractSource(
             repository,
             "unixplace-lots-contract",
@@ -80,11 +67,15 @@ async def sync_source_catalog(
             "Tracks Next.js build asset changes and creates a review entry when the public "
             "bundle fingerprint changes."
             if isinstance(source, NextDeploymentSource)
-            else "Tracks public JSON response structure and creates a review entry when "
-            "the contract shape changes."
+            else (
+                "Tracks crawler commits under data/snapshots and links review entries to GitHub."
+                if isinstance(source, GitHubSnapshotSource)
+                else "Tracks public JSON response structure and creates a review entry when "
+                "the contract shape changes."
+            )
         )
         default_kind = (
-            ChangeKind.TECHNICAL if isinstance(source, NextDeploymentSource) else ChangeKind.API
+            ChangeKind.API if isinstance(source, JsonContractSource) else ChangeKind.TECHNICAL
         )
         current = await repository.get_source(source.slug)
         source_record = SourceRecord(

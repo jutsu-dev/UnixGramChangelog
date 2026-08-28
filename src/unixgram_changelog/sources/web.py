@@ -148,3 +148,71 @@ class JsonContractSource:
             tags=("api", "contract"),
         )
         return [Detection(entry=entry, confidence=0.99, evidence=evidence)]
+
+
+@dataclass(slots=True)
+class GitHubSnapshotSource:
+    repository: Repository
+    slug: str = "github-web-snapshots"
+    name: str = "GitHub snapshots"
+    repository_name: str = "jutsu-dev/UnixGramChangelog"
+    timeout_seconds: float = 12.0
+
+    async def collect(self) -> list[Detection]:
+        api_url = (
+            f"https://api.github.com/repos/{self.repository_name}/commits"
+            "?path=data/snapshots&per_page=1"
+        )
+        timeout = aiohttp.ClientTimeout(total=self.timeout_seconds)
+        headers = {
+            "Accept": "application/vnd.github+json",
+            "User-Agent": "UnixGramChangelog/1.0",
+        }
+        async with aiohttp.ClientSession(timeout=timeout, headers=headers) as session:
+            async with session.get(api_url) as response:
+                response.raise_for_status()
+                commits = await response.json()
+            if not isinstance(commits, list) or not commits:
+                raise ValueError("GitHub returned no snapshot commits")
+            latest = commits[0]
+            sha = str(latest.get("sha", ""))
+            html_url = str(latest.get("html_url", ""))
+            if len(sha) < 7 or not html_url.startswith("https://github.com/"):
+                raise ValueError("GitHub returned a malformed commit")
+            previous = await self.repository.get_source_state(self.slug, "commit")
+            await self.repository.set_source_state(self.slug, "commit", sha)
+            if previous is None or previous == sha:
+                return []
+            async with session.get(
+                f"https://api.github.com/repos/{self.repository_name}/commits/{sha}"
+            ) as response:
+                response.raise_for_status()
+                details = await response.json()
+
+        files = [
+            str(item.get("filename", ""))
+            for item in details.get("files", [])
+            if str(item.get("filename", "")).startswith("data/snapshots/")
+        ]
+        sites = []
+        if any(path.startswith("data/snapshots/unixgram/") for path in files):
+            sites.append("UnixGram")
+        if any(path.startswith("data/snapshots/unixplace/") for path in files):
+            sites.append("UnixPlace")
+        subject = " и ".join(sites) if sites else "UnixGram"
+        shown_files = [path.removeprefix("data/snapshots/") for path in files[:12]]
+        evidence = "Изменено файлов: " + str(len(files))
+        if shown_files:
+            evidence += "\n" + "\n".join(f"• {path}" for path in shown_files)
+        entry = ChangeEntry(
+            title=f"Новые изменения {subject}",
+            summary="Обновился снимок веб-ресурсов. Изменения сохранены в GitHub.",
+            kind=ChangeKind.TECHNICAL,
+            source_name=f"GitHub · {self.repository_name}@{sha[:7]}",
+            source_url=html_url,
+            source_slug=self.slug,
+            external_id=f"github-snapshot:{sha}",
+            evidence=evidence,
+            tags=("web",),
+        )
+        return [Detection(entry=entry, confidence=1.0, evidence=evidence)]

@@ -7,6 +7,8 @@
 
 Он автоматически проверяет сборки UnixGram и UnixPlace, следит за публичным API-контрактом UnixPlace и складывает найденные изменения в закрытую очередь владельца. Первая проверка создаёт базовую точку без уведомления. Публикация в канал всегда требует подтверждения.
 
+Веб-ресурсы фиксируются отдельными GitHub-коммитами в [`data/snapshots`](data/snapshots). Поэтому каждая карточка найденной сборки содержит проверяемую ссылку вида `GitHub · jutsu-dev/UnixGramChangelog@<commit>`.
+
 [![CI](https://github.com/jutsu-dev/UnixGramChangelog/actions/workflows/ci.yml/badge.svg)](https://github.com/jutsu-dev/UnixGramChangelog/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/Python-3.12-151515?logo=python&logoColor=white)](https://www.python.org/)
 [![aiogram](https://img.shields.io/badge/aiogram-3-151515?logo=telegram&logoColor=white)](https://docs.aiogram.dev/)
