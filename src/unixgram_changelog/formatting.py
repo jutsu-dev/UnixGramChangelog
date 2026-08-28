@@ -95,8 +95,40 @@ def _render_source_row(entry: ChangeEntry) -> str:
     return f"Источник · {_render_source(entry.source_name, entry.source_url)}"
 
 
+def _is_github_commit_url(url: str | None) -> bool:
+    if not is_valid_source_url(url):
+        return False
+    assert url is not None
+    parsed = urlsplit(url)
+    return parsed.netloc == "github.com" and "/commit/" in parsed.path
+
+
+def _use_snapshot_digest_layout(entry: ChangeEntry) -> bool:
+    return (
+        entry.kind is ChangeKind.TECHNICAL
+        and bool(entry.changed_files)
+        and _is_github_commit_url(entry.archive_url)
+    )
+
+
+def _render_snapshot_digest(entry: ChangeEntry, tag: str) -> str:
+    lines = [f"<b>{escape(_maybe_trim(entry.title, 140))}</b>"]
+    changed_files = _render_changed_files(entry)
+    if changed_files:
+        lines.extend(("", *changed_files))
+    archive_row = _render_archive_row(entry)
+    if archive_row:
+        lines.extend(("", archive_row))
+    tags = _render_tags(entry, tag)
+    if tags:
+        lines.extend(("", tags))
+    return _maybe_trim("\n".join(lines), MAX_MESSAGE_LENGTH)
+
+
 def render_entry(entry: ChangeEntry) -> str:
     code, label, tag = KIND_META[entry.kind]
+    if _use_snapshot_digest_layout(entry):
+        return _render_snapshot_digest(entry, tag)
     details: list[str] = [f"{code} {label}"]
     if entry.version:
         details.append(f"v{escape(entry.version)}")

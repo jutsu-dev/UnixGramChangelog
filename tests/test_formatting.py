@@ -52,6 +52,27 @@ def test_snapshot_post_can_omit_service_summary() -> None:
     assert "📄 <code>unixgram/chunks/app/layout.json</code>" in text
 
 
+def test_snapshot_post_uses_compact_github_layout() -> None:
+    text = render_entry(
+        ChangeEntry(
+            title="Новые изменения UnixGram",
+            summary="",
+            kind=ChangeKind.TECHNICAL,
+            source_name="UnixGram",
+            source_url="https://unixgram.com/",
+            archive_label="jutsu-dev/UnixGramChangelog@abc1234",
+            archive_url="https://github.com/jutsu-dev/UnixGramChangelog/commit/abc1234",
+            changed_files=("unixgram/chunks/app/layout.json", "unixgram/css/app.json"),
+            tags=("web",),
+        )
+    )
+    assert text.startswith("<b>Новые изменения UnixGram</b>")
+    assert "<b>UnixGram Changelog</b>" not in text
+    assert "Источник ·" not in text
+    assert "GitHub · " in text
+    assert "#web" in text
+
+
 def test_unsafe_source_scheme_is_not_linked() -> None:
     text = render_entry(
         ChangeEntry(

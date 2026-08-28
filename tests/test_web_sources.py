@@ -145,6 +145,42 @@ async def test_github_snapshot_source_links_new_commit(
     assert "unixgram/chunks/app/layout.json" in detections[0].evidence
 
 
+@pytest.mark.asyncio
+async def test_github_snapshot_source_supports_unixplace_commits(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repository = Repository(tmp_path / "changelog.db")
+    await repository.initialize()
+    first = {"sha": "c" * 40, "html_url": "https://github.com/example/repo/commit/ccc"}
+    second = {"sha": "d" * 40, "html_url": "https://github.com/example/repo/commit/ddd"}
+    FakeJsonSession.payloads = [
+        [first],
+        [second],
+        {"files": [{"filename": "data/snapshots/unixplace/chunks/app/lots.json"}]},
+    ]
+    monkeypatch.setattr("unixgram_changelog.sources.web.aiohttp.ClientSession", FakeJsonSession)
+    source = GitHubSnapshotSource(
+        repository,
+        repository_name="example/repo",
+        site_slug="unixplace",
+        subject="UnixPlace",
+        base_url="https://place.unixgram.com/",
+        slug="github-unixplace-snapshots",
+        name="GitHub UnixPlace snapshots",
+    )
+
+    assert await source.collect() == []
+    detections = await source.collect()
+
+    assert len(detections) == 1
+    assert detections[0].entry.source_url == "https://place.unixgram.com/"
+    assert detections[0].entry.source_name == "UnixPlace"
+    assert detections[0].entry.archive_url == second["html_url"]
+    assert detections[0].entry.changed_files == ("unixplace/chunks/app/lots.json",)
+    assert "unixplace/chunks/app/lots.json" in detections[0].evidence
+
+
 class StaticSource:
     slug = "web"
     name = "Web"
