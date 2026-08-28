@@ -65,10 +65,7 @@ def create_router(
             return
         await show_home(message)
 
-    @router.message(Command("types"))
-    async def show_types(message: Message) -> None:
-        if not await require_admin(message):
-            return
+    async def show_types_content(message: Message) -> None:
         rows = [
             f"{code} <code>{kind.value}</code>: {escape(label)}"
             for kind, (code, label, _) in KIND_META.items()
@@ -79,6 +76,12 @@ def create_router(
             "<blockquote>выберите код для команды /new</blockquote>\n\n" + "\n".join(rows),
             reply_markup=main_menu(),
         )
+
+    @router.message(Command("types"))
+    async def show_types(message: Message) -> None:
+        if not await require_admin(message):
+            return
+        await show_types_content(message)
 
     @router.message(Command("new"))
     async def new_entry(message: Message) -> None:
@@ -122,10 +125,7 @@ def create_router(
             skip_chat_id=message.chat.id,
         )
 
-    @router.message(Command("queue"))
-    async def queue(message: Message) -> None:
-        if not await require_admin(message):
-            return
+    async def show_queue(message: Message) -> None:
         entries = await repository.list_by_status(EntryStatus.REVIEW)
         if not entries:
             await answer_card(
@@ -146,10 +146,13 @@ def create_router(
                 disable_web_page_preview=True,
             )
 
-    @router.message(Command("history"))
-    async def history(message: Message) -> None:
+    @router.message(Command("queue"))
+    async def queue(message: Message) -> None:
         if not await require_admin(message):
             return
+        await show_queue(message)
+
+    async def show_history(message: Message) -> None:
         entries = await repository.list_by_status(EntryStatus.PUBLISHED, limit=10)
         if not entries:
             await answer_card(
@@ -165,6 +168,12 @@ def create_router(
             "<blockquote>10 последних записей</blockquote>\n\n" + "\n".join(rows),
             reply_markup=main_menu(),
         )
+
+    @router.message(Command("history"))
+    async def history(message: Message) -> None:
+        if not await require_admin(message):
+            return
+        await show_history(message)
 
     @router.callback_query(F.data == "menu:home")
     async def menu_home(callback: CallbackQuery) -> None:
@@ -182,19 +191,19 @@ def create_router(
     async def menu_queue(callback: CallbackQuery) -> None:
         await callback.answer()
         if isinstance(callback.message, Message):
-            await queue(callback.message)
+            await show_queue(callback.message)
 
     @router.callback_query(F.data == "menu:history")
     async def menu_history(callback: CallbackQuery) -> None:
         await callback.answer()
         if isinstance(callback.message, Message):
-            await history(callback.message)
+            await show_history(callback.message)
 
     @router.callback_query(F.data == "menu:types")
     async def menu_types(callback: CallbackQuery) -> None:
         await callback.answer()
         if isinstance(callback.message, Message):
-            await show_types(callback.message)
+            await show_types_content(callback.message)
 
     @router.callback_query(F.data.startswith("publish:"))
     async def publish(callback: CallbackQuery) -> None:
