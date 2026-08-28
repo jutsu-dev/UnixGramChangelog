@@ -27,6 +27,9 @@ jobs:
     environment: production
     permissions:
       contents: read
+    concurrency:
+      group: unixgram-changelog-production
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
       - uses: webfactory/ssh-agent@dc588b651fe13675774614f8e6a936a468676387

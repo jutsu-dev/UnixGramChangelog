@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+exec 9>/run/lock/unixgram-changelog-deploy.lock
+flock -w 900 9
+
 service_name="unixgram-changelog"
 app_root="/opt/unixgram-changelog"
 releases_dir="$app_root/releases"

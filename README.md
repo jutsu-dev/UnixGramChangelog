@@ -82,41 +82,11 @@ Production настроен на одного владельца:
 - публикация недоступна источникам и выполняется через единый Publisher;
 - production secrets хранятся вне репозитория;
 - deploy запускается только из ветки `main` через защищённое GitHub Environment
-- репозиторий должен храниться в private visibility
+- публичный репозиторий не содержит production secrets и прав доступа
 
-Права на запуск, копирование, модификацию и хостинг не передаются. Условия зафиксированы в [LICENSE](LICENSE). Реальная защита production строится на owner-only доступе, внешних секретах, private visibility и отдельном deploy-контуре.
+Права на самостоятельный запуск, копирование, модификацию и хостинг не передаются. Условия зафиксированы в [LICENSE](LICENSE). Реальная защита production строится на owner-only доступе, внешних секретах и отдельном deploy-контуре.
 
 Подробнее: [модель безопасности](docs/SECURITY.md) и [политика раскрытия](SECURITY.md).
-
-## Локальная проверка владельцем
-
-Этот раздел предназначен для владельца и согласованных разработчиков. Сам факт доступа к исходному коду не является разрешением на запуск.
-
-```bash
-python -m venv .venv
-.venv/Scripts/activate
-python -m pip install -e ".[dev]"
-copy .env.example .env
-```
-
-```dotenv
-BOT_TOKEN=development_bot_token
-CHANNEL_ID=@development_channel
-ADMIN_IDS=owner_telegram_id
-DATABASE_PATH=data/changelog.db
-```
-
-```bash
-unixgram-changelog
-```
-
-Docker:
-
-```bash
-docker compose up --build -d
-```
-
-Production unit находится в [`deploy/systemd`](deploy/systemd). Пошаговый deploy и rollback описаны в [docs/DEPLOY.md](docs/DEPLOY.md).
 
 ## Устройство проекта
 
