@@ -37,6 +37,21 @@ def test_post_has_stable_search_tags() -> None:
     assert "#UnixGramChangelog" in text
 
 
+def test_snapshot_post_can_omit_service_summary() -> None:
+    text = render_entry(
+        ChangeEntry(
+            title="Новые изменения UnixGram",
+            summary="",
+            kind=ChangeKind.TECHNICAL,
+            source_name="UnixGram",
+            source_url="https://unixgram.com/",
+            changed_files=("unixgram/chunks/app/layout.json",),
+        )
+    )
+    assert "Нужно проверить интерфейс" not in text
+    assert "📄 <code>unixgram/chunks/app/layout.json</code>" in text
+
+
 def test_unsafe_source_scheme_is_not_linked() -> None:
     text = render_entry(
         ChangeEntry(
@@ -71,6 +86,24 @@ def test_review_card_uses_compact_layout_and_hidden_evidence() -> None:
     assert "📄 <code>layout.js</code>" in text
     assert "и ещё 1 файла" in text
     assert "<blockquote expandable><b>Технические данные</b>" in text
+
+
+def test_review_card_omits_blank_summary() -> None:
+    text = render_review_card(
+        ChangeEntry(
+            title="Новые изменения UnixGram",
+            summary="",
+            kind=ChangeKind.TECHNICAL,
+            source_name="UnixGram",
+            source_url="https://unixgram.com/",
+            archive_label="jutsu-dev/UnixGramChangelog@abc1234",
+            archive_url="https://github.com/jutsu-dev/UnixGramChangelog/commit/abc1234",
+            changed_files=("unixgram/layout.json",),
+        )
+    )
+    assert "Новые изменения UnixGram" in text
+    assert "📄 <code>unixgram/layout.json</code>" in text
+    assert "\n\n\n" not in text
 
 
 def test_plain_review_card_contains_archive_reference() -> None:

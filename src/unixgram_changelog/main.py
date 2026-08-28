@@ -47,6 +47,15 @@ def build_default_sources(
 ) -> list[ChangeSource]:
     return [
         GitHubSnapshotSource(repository=repository, timeout_seconds=timeout_seconds),
+        GitHubSnapshotSource(
+            repository=repository,
+            site_slug="unixplace",
+            subject="UnixPlace",
+            base_url="https://place.unixgram.com/",
+            slug="github-unixplace-snapshots",
+            name="GitHub UnixPlace snapshots",
+            timeout_seconds=timeout_seconds,
+        ),
         JsonContractSource(
             repository,
             "unixplace-lots-contract",

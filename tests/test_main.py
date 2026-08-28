@@ -18,11 +18,13 @@ async def test_sync_source_catalog_bootstraps_default_sources(tmp_path: Path) ->
     stored = await repository.list_sources()
 
     assert [source.slug for source in stored] == [
+        "github-unixplace-snapshots",
         "github-web-snapshots",
         "unixplace-lots-contract",
     ]
     assert stored[0].default_kind is ChangeKind.TECHNICAL
-    assert stored[1].default_kind is ChangeKind.API
+    assert stored[1].default_kind is ChangeKind.TECHNICAL
+    assert stored[2].default_kind is ChangeKind.API
 
 
 @pytest.mark.asyncio
@@ -49,7 +51,7 @@ async def test_sync_source_catalog_preserves_owner_toggles(tmp_path: Path) -> No
 
     assert stored is not None
     assert stored.name == "GitHub snapshots"
-    assert stored.url is None
+    assert stored.url == "https://unixgram.com/"
     assert stored.mode is SourceMode.AUTO
     assert stored.enabled is False
     assert stored.default_kind is ChangeKind.IMPORTANT

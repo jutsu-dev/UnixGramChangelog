@@ -110,7 +110,8 @@ def render_entry(entry: ChangeEntry) -> str:
     if details:
         lines.extend(("", f"<blockquote>{' · '.join(details)}</blockquote>"))
 
-    lines.extend(("", escape(_maybe_trim(entry.summary, 900))))
+    if entry.summary.strip():
+        lines.extend(("", escape(_maybe_trim(entry.summary, 900))))
 
     changed_files = _render_changed_files(entry)
     if changed_files:
@@ -162,9 +163,9 @@ def render_review_card(entry: ChangeEntry) -> str:
     lines = [
         f"<b>{escape(_maybe_trim(entry.title, 140))}</b>",
         f"<blockquote>{code} {escape(label)} · {escape(entry.source_name)} · #{tag}</blockquote>",
-        "",
-        escape(_maybe_trim(entry.summary, 720)),
     ]
+    if entry.summary.strip():
+        lines.extend(("", escape(_maybe_trim(entry.summary, 720))))
 
     changed_files = _render_changed_files(entry)
     if changed_files:

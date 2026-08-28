@@ -26,12 +26,21 @@ jobs:
         run: python scripts/crawl_web_snapshots.py
       - name: Commit detected changes
         run: |
-          if git diff --quiet -- data/snapshots; then
-            echo "No changes"
-            exit 0
-          fi
           git config user.name "unixgram-changelog[bot]"
           git config user.email "unixgram-changelog[bot]@users.noreply.github.com"
-          git add data/snapshots
-          git commit -m "[snapshot] Update UnixGram web resources"
-          git push
+          changed=0
+          if ! git diff --quiet -- data/snapshots/unixgram; then
+            git add data/snapshots/unixgram
+            git commit -m "[snapshot][unixgram] Update web resources"
+            changed=1
+          fi
+          if ! git diff --quiet -- data/snapshots/unixplace; then
+            git add data/snapshots/unixplace
+            git commit -m "[snapshot][unixplace] Update marketplace resources"
+            changed=1
+          fi
+          if [ "$changed" -eq 1 ]; then
+            git push
+          else
+            echo "No changes"
+          fi

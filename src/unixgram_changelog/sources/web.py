@@ -97,10 +97,7 @@ class NextDeploymentSource:
         evidence = "\n".join(evidence_lines)
         entry = ChangeEntry(
             title=f"{self.name}: новая сборка",
-            summary=(
-                "Обновился набор клиентских ресурсов. Проверяем интерфейс и функции "
-                "перед публикацией подробного описания."
-            ),
+            summary="",
             kind=ChangeKind.TECHNICAL,
             source_name=self.name,
             source_url=self.base_url,
@@ -153,6 +150,9 @@ class JsonContractSource:
 @dataclass(slots=True)
 class GitHubSnapshotSource:
     repository: Repository
+    site_slug: str = "unixgram"
+    subject: str = "UnixGram"
+    base_url: str = "https://unixgram.com/"
     slug: str = "github-web-snapshots"
     name: str = "GitHub snapshots"
     repository_name: str = "jutsu-dev/UnixGramChangelog"
@@ -161,7 +161,7 @@ class GitHubSnapshotSource:
     async def collect(self) -> list[Detection]:
         api_url = (
             f"https://api.github.com/repos/{self.repository_name}/commits"
-            "?path=data/snapshots&per_page=1"
+            f"?path=data/snapshots/{self.site_slug}&per_page=1"
         )
         timeout = aiohttp.ClientTimeout(total=self.timeout_seconds)
         headers = {
@@ -192,28 +192,20 @@ class GitHubSnapshotSource:
         files = [
             str(item.get("filename", ""))
             for item in details.get("files", [])
-            if str(item.get("filename", "")).startswith("data/snapshots/")
+            if str(item.get("filename", "")).startswith(
+                f"data/snapshots/{self.site_slug}/"
+            )
         ]
-        sites = []
-        if any(path.startswith("data/snapshots/unixgram/") for path in files):
-            sites.append("UnixGram")
-        if any(path.startswith("data/snapshots/unixplace/") for path in files):
-            sites.append("UnixPlace")
-        subject = " и ".join(sites) if sites else "UnixGram"
         shown_files = [path.removeprefix("data/snapshots/") for path in files[:12]]
         evidence = "Изменено файлов: " + str(len(files))
         if shown_files:
             evidence += "\n" + "\n".join(f"• {path}" for path in shown_files)
         entry = ChangeEntry(
-            title=f"Новые изменения {subject}",
-            summary="Обновился снимок веб-ресурсов. Изменения сохранены в GitHub.",
+            title=f"Новые изменения {self.subject}",
+            summary="",
             kind=ChangeKind.TECHNICAL,
-            source_name=subject,
-            source_url=(
-                "https://place.unixgram.com/"
-                if subject == "UnixPlace"
-                else "https://unixgram.com/"
-            ),
+            source_name=self.subject,
+            source_url=self.base_url,
             source_slug=self.slug,
             external_id=f"github-snapshot:{sha}",
             evidence=evidence,
