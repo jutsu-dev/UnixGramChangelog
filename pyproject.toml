@@ -1,0 +1,50 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "unixgram-changelog"
+version = "0.1.0"
+description = "A review-first changelog pipeline for UnixGram"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "UnixGram History" }]
+dependencies = [
+  "aiogram>=3.22,<4",
+  "aiosqlite>=0.21,<1",
+  "pydantic-settings>=2.10,<3",
+]
+
+[project.optional-dependencies]
+dev = [
+  "mypy>=1.17,<2",
+  "pytest>=8.4,<9",
+  "pytest-asyncio>=1.1,<2",
+  "ruff>=0.12,<1",
+]
+
+[project.scripts]
+unixgram-changelog = "unixgram_changelog.main:run"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/unixgram_changelog"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "RUF"]
+ignore = ["RUF001"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+mypy_path = "src"
+files = ["src"]
+explicit_package_bases = true
