@@ -20,4 +20,33 @@ jobs:
       - run: ruff check .
       - run: mypy src
       - run: pytest -q
-
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: quality
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+      - name: Trust the VPS host key
+        env:
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          install -d -m 0700 ~/.ssh
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 0600 ~/.ssh/known_hosts
+      - name: Upload release archive
+        env:
+          RELEASE_ID: ${{ github.sha }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          tar --exclude='.git' --exclude='.venv' --exclude='dist' -czf release.tgz .
+          ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "mkdir -p /opt/unixgram-changelog/releases/$RELEASE_ID"
+          scp -P "$VPS_PORT" release.tgz "$VPS_USER@$VPS_HOST:/opt/unixgram-changelog/releases/$RELEASE_ID/release.tgz"
+          ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "cd /opt/unixgram-changelog/releases/$RELEASE_ID && tar -xzf release.tgz && rm -f release.tgz && chmod +x deploy/deploy.sh && ./deploy/deploy.sh $RELEASE_ID"

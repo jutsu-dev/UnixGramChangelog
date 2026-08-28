@@ -4,6 +4,7 @@ import logging
 from dataclasses import dataclass
 
 from .models import ChangeEntry, EntryStatus, SourceMode
+from .notifications import AdminNotifier
 from .publisher import Publisher
 from .sources import ChangeSource
 from .storage import Repository
@@ -24,11 +25,13 @@ class IngestionService:
         repository: Repository,
         sources: list[ChangeSource],
         publisher: Publisher | None = None,
+        notifier: AdminNotifier | None = None,
         review_required: bool = True,
     ) -> None:
         self.repository = repository
         self.sources = sources
         self.publisher = publisher
+        self.notifier = notifier
         self.review_required = review_required
 
     async def collect(self) -> CollectReport:
@@ -71,6 +74,11 @@ class IngestionService:
                 accepted.append(saved)
                 if status is EntryStatus.PUBLISHED and self.publisher is not None:
                     await self.publisher.publish(saved)
+                elif self.notifier is not None:
+                    await self.notifier.notify_review_entry(
+                        saved,
+                        heading=f"Источник {source.name} прислал новое изменение",
+                    )
 
         return CollectReport(
             accepted=tuple(accepted),

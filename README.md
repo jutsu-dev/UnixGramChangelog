@@ -3,7 +3,7 @@
 
 # UnixGram Changelog
 
-**Техническая летопись изменений UnixGram**
+**Бот и архив изменений UnixGram**
 
 [![CI](https://github.com/jutsu-dev/UnixGramChangelog/actions/workflows/ci.yml/badge.svg)](https://github.com/jutsu-dev/UnixGramChangelog/actions/workflows/ci.yml)
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-111111?logo=python&logoColor=white)](https://www.python.org/)
@@ -15,7 +15,7 @@
 
 ---
 
-UnixGram Changelog обнаруживает, проверяет и сохраняет изменения экосистемы UnixGram. Проект отделяет факты от слухов: автоматизация собирает данные и готовит запись, а редактор подтверждает смысл, источник и момент публикации.
+UnixGram Changelog обнаруживает, проверяет и сохраняет изменения экосистемы UnixGram. Автоматика собирает данные и готовит запись, а редактор подтверждает смысл, источник и момент публикации.
 
 ## Зачем он нужен
 
@@ -62,12 +62,14 @@ flowchart LR
 
 - редакционная очередь с предпросмотром;
 - публикация и отклонение кнопкой;
+- личные уведомления редакции о новых находках;
 - HTML-разметка с экранированием пользовательских данных;
 - plain-text fallback при ошибке Telegram entities;
 - история опубликованных записей и ID сообщений;
 - SHA-256 fingerprint и `external_id` против дублей;
 - изоляция сбоев отдельных источников;
-- доступ к управлению только для `ADMIN_IDS`.
+- доступ к управлению только для `ADMIN_IDS`;
+- отдельный Docker + systemd deploy для VPS.
 
 ## Быстрый запуск
 
@@ -102,8 +104,10 @@ docker compose up --build -d
 ```
 
 Для постоянного запуска на Linux подготовлен unit-файл
-[`deploy/unixgram-changelog.service`](deploy/unixgram-changelog.service). Секреты хранятся
+[`deploy/systemd/unixgram-changelog.service`](deploy/systemd/unixgram-changelog.service). Секреты хранятся
 в `/etc/unixgram-changelog.env`, база данных находится в `/var/lib/unixgram-changelog`.
+
+Полный сценарий выкладки и отката: [docs/DEPLOY.md](docs/DEPLOY.md).
 
 > Никогда не добавляйте `.env`, токены, cookies или пароли в Git. Для CI и production используйте GitHub Secrets или менеджер секретов сервера.
 

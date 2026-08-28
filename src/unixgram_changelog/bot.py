@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from html import escape
 
-from aiogram import Bot, F, Router
-from aiogram.exceptions import TelegramAPIError
+from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from .formatting import KIND_META, render_entry
 from .models import ChangeEntry, ChangeKind, EntryStatus
+from .notifications import AdminNotifier
 from .publisher import Publisher
 from .storage import Repository
 
@@ -29,6 +29,7 @@ def review_keyboard(entry_id: int) -> InlineKeyboardMarkup:
 def create_router(
     repository: Repository,
     publisher: Publisher,
+    notifier: AdminNotifier,
     admin_ids: frozenset[int],
 ) -> Router:
     router = Router(name="unixgram-changelog")
@@ -68,7 +69,7 @@ def create_router(
         await message.answer("<b>Категории</b>\n\n" + "\n".join(rows))
 
     @router.message(Command("new"))
-    async def new_entry(message: Message, bot: Bot) -> None:
+    async def new_entry(message: Message) -> None:
         if not await require_admin(message):
             return
         raw = (message.text or "").partition(" ")[2].strip()
@@ -104,18 +105,11 @@ def create_router(
             reply_markup=review_keyboard(saved.id or 0),
             disable_web_page_preview=True,
         )
-        for admin_id in admin_ids:
-            if admin_id == message.chat.id:
-                continue
-            try:
-                await bot.send_message(
-                    admin_id,
-                    "<b>Новое изменение ждёт проверки</b>\n\n" + render_entry(saved),
-                    reply_markup=review_keyboard(saved.id or 0),
-                    disable_web_page_preview=True,
-                )
-            except TelegramAPIError:
-                continue
+        await notifier.notify_review_entry(
+            saved,
+            reply_markup=review_keyboard(saved.id or 0),
+            skip_chat_id=message.chat.id,
+        )
 
     @router.message(Command("queue"))
     async def queue(message: Message) -> None:

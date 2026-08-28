@@ -1,0 +1,26 @@
+[Unit]
+Description=UnixGram Changelog Bot
+Wants=network-online.target
+After=network-online.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=10
+TimeoutStartSec=180
+TimeoutStopSec=30
+EnvironmentFile=/etc/unixgram-changelog.env
+ExecStartPre=-/usr/bin/docker rm -f unixgram-changelog
+ExecStart=/usr/bin/docker run --name unixgram-changelog --rm \
+    --env-file /etc/unixgram-changelog.env \
+    --read-only \
+    --tmpfs /tmp:rw,noexec,nosuid,size=32m \
+    --cap-drop ALL \
+    --security-opt no-new-privileges:true \
+    --volume /var/lib/unixgram-changelog:/app/data \
+    unixgram-changelog:local
+ExecStop=-/usr/bin/docker stop --time 20 unixgram-changelog
+
+[Install]
+WantedBy=multi-user.target
