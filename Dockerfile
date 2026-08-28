@@ -13,4 +13,5 @@ RUN pip install --no-cache-dir .
 
 USER changelog
 VOLUME ["/app/data"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD python -c "from unixgram_changelog.config import Settings; Settings(); print('ok')" || exit 1
 CMD ["unixgram-changelog"]

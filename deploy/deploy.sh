@@ -20,6 +20,17 @@ if [[ ! -f "$env_file" ]]; then
   exit 1
 fi
 
+env_owner="$(stat -c '%u' "$env_file")"
+env_mode="$(stat -c '%a' "$env_file")"
+if [[ "$env_owner" != "0" ]]; then
+  echo "env file must be owned by root: $env_file" >&2
+  exit 1
+fi
+if [[ "$env_mode" != "600" && "$env_mode" != "400" ]]; then
+  echo "env file must use 600 or 400 permissions: $env_file" >&2
+  exit 1
+fi
+
 if [[ ! -d "$release_path" ]]; then
   echo "missing release directory: $release_path" >&2
   exit 1

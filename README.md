@@ -1,95 +1,108 @@
 <div align="center">
-  <img src="docs/assets/unixgram-changelog-logo.jpg" width="168" alt="UnixGram Changelog">
+  <img src="docs/assets/unixgram-changelog-hero.png" width="100%" alt="UnixGram Changelog">
 
 # UnixGram Changelog
 
-**Бот и архив изменений UnixGram**
+**Проверяемая история изменений UnixGram**
 
 [![CI](https://github.com/jutsu-dev/UnixGramChangelog/actions/workflows/ci.yml/badge.svg)](https://github.com/jutsu-dev/UnixGramChangelog/actions/workflows/ci.yml)
-[![Python 3.12](https://img.shields.io/badge/Python-3.12-111111?logo=python&logoColor=white)](https://www.python.org/)
-[![aiogram 3](https://img.shields.io/badge/aiogram-3-111111?logo=telegram&logoColor=white)](https://docs.aiogram.dev/)
-[![License MIT](https://img.shields.io/badge/license-MIT-111111)](LICENSE)
+[![Python 3.12](https://img.shields.io/badge/Python-3.12-151515?logo=python&logoColor=white)](https://www.python.org/)
+[![aiogram 3](https://img.shields.io/badge/aiogram-3-151515?logo=telegram&logoColor=white)](https://docs.aiogram.dev/)
+[![private control](https://img.shields.io/badge/control-owner_only-151515?logo=telegram&logoColor=white)](#доступ)
+[![All rights reserved](https://img.shields.io/badge/license-all_rights_reserved-151515)](LICENSE)
 
-[Telegram-канал](https://t.me/UnixGramChangelog) · [Бот](https://t.me/UnixGramChangelogBot) · [UnixGram History](https://t.me/unixgramhistory)
+[Канал](https://t.me/UnixGramChangelog) · [Бот](https://t.me/UnixGramChangelogBot) · [UnixGram History](https://t.me/unixgramhistory)
 </div>
 
----
+## Один канал. Одна история. Проверяемые источники.
 
-UnixGram Changelog обнаруживает, проверяет и сохраняет изменения экосистемы UnixGram. Автоматика собирает данные и готовит запись, а редактор подтверждает смысл, источник и момент публикации.
+UnixGram меняется быстро. Этот проект собирает находки в редакционную очередь, защищает канал от повторов и сохраняет ссылку на источник у каждой публикации. Решение о публикации всегда принимает владелец.
 
-## Зачем он нужен
-
-- быстро находить новые функции, исправления и эксперименты;
-- сохранять проверяемую историю с источниками;
-- не терять важное среди обычных новостей;
-- подключать новые источники без переписывания Telegram-бота;
-- предотвращать повторные публикации.
-
-## Как проходит изменение
+| Что происходит | Как это работает |
+|---|---|
+| Находка попадает в очередь | бот нормализует поля и вычисляет fingerprint |
+| Запись проверяется | владелец видит готовую карточку и источник |
+| Запись одобряется | единый Publisher отправляет её в канал |
+| История сохраняется | SQLite хранит статус и Telegram message ID |
 
 ```mermaid
 flowchart LR
-    A[Источник] --> B[Обнаружение]
-    B --> C[Нормализация]
-    C --> D{Уже публиковалось?}
-    D -- Да --> E[Пропуск]
-    D -- Нет --> F[Очередь проверки]
-    F --> G{Решение редактора}
-    G -- Одобрить --> H[Telegram]
-    G -- Отклонить --> I[История]
-    H --> I
+    S[Источник] --> N[Нормализация]
+    N --> D{Дубликат?}
+    D -- да --> X[Пропуск]
+    D -- нет --> R[Проверка владельца]
+    R -- отклонить --> A[Архив]
+    R -- опубликовать --> T[Telegram канал]
+    T --> A
 ```
 
-Источники не имеют доступа к каналу. Публикация возможна только через единый `Publisher`, после сохранения записи и проверки прав администратора.
+## Редакторская панель
+
+Управление работает только в личном чате владельца. Остальные сообщения и callback-запросы молча отбрасываются до обработчиков.
+
+```text
+/new feature | Поиск по подаркам | В каталоге появился поиск | UnixGram | https://unixgram.com/...
+```
+
+После проверки бот показывает карточку с действиями «Опубликовать» и «Отклонить». `/queue` открывает очередь, `/history` показывает последние записи, `/types` выводит допустимые категории.
+
+В интерфейсе используются иконки из набора [Telegram iOS Icons](https://t.me/addemoji/tgiosicons). Если custom emoji недоступны конкретному клиенту, бот автоматически повторяет сообщение с обычными Unicode-иконками.
+
+Пост в канале содержит:
+
+- тип изменения и стабильный поисковый тег;
+- короткий заголовок без обрезанной разметки;
+- описание с безопасным HTML-экранированием;
+- кликабельный подтверждающий источник;
+- plain-text fallback при ошибке Telegram entities.
 
 ## Категории
 
-| | Категория | Тег |
+| Код | Назначение | Тег |
 |---|---|---|
-| ✨ | новая функция | `#feature` |
-| 🎨 | интерфейс | `#interface` |
-| 🛠 | исправление | `#fix` |
-| ⚙️ | техническое изменение | `#technical` |
-| 🧪 | эксперимент | `#experiment` |
-| 🔎 | обнаруженная функция | `#discovery` |
-| 🔌 | API | `#api` |
-| 📱 | клиент | `#client` |
-| 🚨 | важное обновление | `#important` |
+| `feature` | новая функция | `#feature` |
+| `interface` | интерфейс | `#interface` |
+| `fix` | исправление | `#fix` |
+| `technical` | техническое изменение | `#technical` |
+| `experiment` | эксперимент | `#experiment` |
+| `discovery` | обнаруженная возможность | `#discovery` |
+| `api` | API | `#api` |
+| `client` | клиент | `#client` |
+| `important` | важное обновление | `#important` |
 
-Полная спецификация: [формат changelog](docs/CHANGELOG_FORMAT.md).
+Полные правила находятся в [спецификации формата](docs/CHANGELOG_FORMAT.md).
 
-## Возможности бота
+## Доступ
 
-- редакционная очередь с предпросмотром;
-- публикация и отклонение кнопкой;
-- личные уведомления редакции о новых находках;
-- HTML-разметка с экранированием пользовательских данных;
-- plain-text fallback при ошибке Telegram entities;
-- история опубликованных записей и ID сообщений;
-- SHA-256 fingerprint и `external_id` против дублей;
-- изоляция сбоев отдельных источников;
-- доступ к управлению только для `ADMIN_IDS`;
-- отдельный Docker + systemd deploy для VPS.
+Production настроен на одного владельца:
 
-## Быстрый запуск
+- конфигурация принимает ровно один Telegram ID;
+- сообщения разрешены только от владельца и только в private chat;
+- неизвестным пользователям бот ничего не отвечает;
+- публикация недоступна источникам и выполняется через единый Publisher;
+- production secrets хранятся вне репозитория;
+- deploy запускается только из ветки `main` через защищённое GitHub Environment
+- репозиторий должен храниться в private visibility
 
-Требуются Python 3.12+ и Telegram-бот с правом публикации в канал.
+Права на запуск, копирование, модификацию и хостинг не передаются. Условия зафиксированы в [LICENSE](LICENSE). Реальная защита production строится на owner-only доступе, внешних секретах, private visibility и отдельном deploy-контуре.
+
+Подробнее: [модель безопасности](docs/SECURITY.md) и [политика раскрытия](SECURITY.md).
+
+## Локальная проверка владельцем
+
+Этот раздел предназначен для владельца и согласованных разработчиков. Сам факт доступа к исходному коду не является разрешением на запуск.
 
 ```bash
-git clone https://github.com/jutsu-dev/UnixGramChangelog.git
-cd UnixGramChangelog
 python -m venv .venv
 .venv/Scripts/activate
 python -m pip install -e ".[dev]"
 copy .env.example .env
 ```
 
-Заполните `.env` локально:
-
 ```dotenv
-BOT_TOKEN=your_bot_token
-CHANNEL_ID=@UnixGramChangelog
-ADMIN_IDS=123456789
+BOT_TOKEN=development_bot_token
+CHANNEL_ID=@development_channel
+ADMIN_IDS=owner_telegram_id
 DATABASE_PATH=data/changelog.db
 ```
 
@@ -97,56 +110,38 @@ DATABASE_PATH=data/changelog.db
 unixgram-changelog
 ```
 
-С Docker:
+Docker:
 
 ```bash
 docker compose up --build -d
 ```
 
-Для постоянного запуска на Linux подготовлен unit-файл
-[`deploy/systemd/unixgram-changelog.service`](deploy/systemd/unixgram-changelog.service). Секреты хранятся
-в `/etc/unixgram-changelog.env`, база данных находится в `/var/lib/unixgram-changelog`.
+Production unit находится в [`deploy/systemd`](deploy/systemd). Пошаговый deploy и rollback описаны в [docs/DEPLOY.md](docs/DEPLOY.md).
 
-Полный сценарий выкладки и отката: [docs/DEPLOY.md](docs/DEPLOY.md).
-
-> Никогда не добавляйте `.env`, токены, cookies или пароли в Git. Для CI и production используйте GitHub Secrets или менеджер секретов сервера.
-
-## Редакционный интерфейс
-
-```text
-/new feature | Поиск по подаркам | В каталоге появился поиск... | UnixGram | https://unixgram.com/...
-```
-
-Ссылка на источник обязательна. Бот создаст предпросмотр только после её проверки. После подтверждения запись появится в канале, а ID публикации сохранится в SQLite. `/queue` показывает очередь, `/history` показывает последние публикации, `/types` содержит допустимые категории.
-
-## Структура
+## Устройство проекта
 
 ```text
 src/unixgram_changelog/
-├── bot.py          редакционный Telegram-интерфейс
-├── formatting.py   формат постов и экранирование
-├── ingestion.py    сбор из независимых источников
-├── publisher.py    единственная точка публикации
-├── storage.py      история и защита от дублей
-└── sources/        расширяемые адаптеры источников
+├── access.py        owner-only граница доступа
+├── bot.py           редакционная панель
+├── formatting.py    Telegram HTML и fallback
+├── ingestion.py     приём изменений от источников
+├── notifications.py личные уведомления владельца
+├── publisher.py     единственная точка публикации
+├── storage.py       история и защита от дублей
+├── ui.py            меню и визуальная система
+└── sources/         адаптеры источников
 ```
 
-Подробнее: [архитектура](docs/ARCHITECTURE.md) · [добавление источника](docs/ADDING_A_SOURCE.md) · [безопасность](docs/SECURITY.md).
+| Документ | Содержание |
+|---|---|
+| [Архитектура](docs/ARCHITECTURE.md) | поток данных и границы компонентов |
+| [Новый источник](docs/ADDING_A_SOURCE.md) | контракт и правила подключения |
+| [Формат changelog](docs/CHANGELOG_FORMAT.md) | поля, категории и ограничения |
+| [Deploy](docs/DEPLOY.md) | выкладка, backup и rollback |
+| [Security](docs/SECURITY.md) | угрозы, секреты и контроль доступа |
 
-## Roadmap
-
-- [x] модель записи и единый формат публикаций;
-- [x] очередь ручной проверки;
-- [x] история и дедупликация;
-- [x] расширяемый контракт источников;
-- [ ] адаптеры публичных UnixGram API и GitHub releases;
-- [ ] сравнение стабильных snapshot без динамического шума;
-- [ ] вложения и галерея доказательств;
-- [ ] редактирование опубликованной записи с журналом ревизий;
-- [ ] PostgreSQL и отдельные workers при росте нагрузки;
-- [ ] наблюдаемость: healthcheck, метрики и уведомления редакции.
-
-## Разработка
+## Проверки
 
 ```bash
 ruff check .
@@ -154,12 +149,12 @@ mypy src
 pytest -q
 ```
 
-Правила участия находятся в [CONTRIBUTING.md](CONTRIBUTING.md). История проекта находится в [CHANGELOG.md](CHANGELOG.md).
+CI выполняет те же проверки перед deploy. Правила участия находятся в [CONTRIBUTING.md](CONTRIBUTING.md), история версий в [CHANGELOG.md](CHANGELOG.md).
 
-## Статус и независимость
+## Статус проекта
 
-Проект развивается сообществом [UnixGram History](https://t.me/unixgramhistory). Это независимый open-source проект и не официальный продукт команды UnixGram.
+UnixGram Changelog развивается командой [UnixGram History](https://t.me/unixgramhistory). Это независимый проект сообщества и не официальный продукт команды UnixGram.
 
-## Лицензия
+## Право использования
 
-[MIT](LICENSE) © 2026 UnixGram History contributors.
+[All rights reserved](LICENSE), 2026 UnixGram History.

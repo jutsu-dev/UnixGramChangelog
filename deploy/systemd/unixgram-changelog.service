@@ -10,11 +10,25 @@ Restart=on-failure
 RestartSec=10
 TimeoutStartSec=180
 TimeoutStopSec=30
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=read-only
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+LockPersonality=yes
+RestrictSUIDSGID=yes
+SystemCallArchitectures=native
 EnvironmentFile=/etc/unixgram-changelog.env
 ExecStartPre=-/usr/bin/docker rm -f unixgram-changelog
 ExecStart=/usr/bin/docker run --name unixgram-changelog --rm \
     --env-file /etc/unixgram-changelog.env \
+    --pull never \
     --read-only \
+    --user 10001:10001 \
+    --pids-limit 128 \
+    --memory 256m \
     --tmpfs /tmp:rw,noexec,nosuid,size=32m \
     --cap-drop ALL \
     --security-opt no-new-privileges:true \

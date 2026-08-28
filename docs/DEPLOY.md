@@ -2,6 +2,8 @@
 
 `UnixGram Changelog` is deployed as a separate Dockerized systemd service and does not share state with `unixgram-history-bot`.
 
+The repository is intended to stay private. Production secrets remain only on the VPS and in protected GitHub secrets.
+
 ## VPS layout
 
 ```text
@@ -29,4 +31,4 @@
 - `VPS_SSH_KEY`
 - `VPS_KNOWN_HOSTS`
 
-The bot token stays on the server in `/etc/unixgram-changelog.env`. Do not copy it to GitHub Secrets unless you need a different release model.
+The bot token stays on the server in `/etc/unixgram-changelog.env`. The file must stay root-owned with `600` or `400` permissions. Do not copy the token into the repository.

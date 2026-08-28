@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -24,3 +24,13 @@ class Settings(BaseSettings):
         if isinstance(value, str):
             return frozenset(int(item.strip()) for item in value.split(",") if item.strip())
         return value
+
+    @model_validator(mode="after")
+    def require_single_owner(self) -> Settings:
+        if len(self.admin_ids) != 1:
+            raise ValueError("ADMIN_IDS must contain exactly one owner id")
+        return self
+
+    @property
+    def owner_id(self) -> int:
+        return next(iter(self.admin_ids))
