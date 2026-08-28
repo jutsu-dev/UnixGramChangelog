@@ -6,7 +6,7 @@ from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
-from .formatting import KIND_META, render_entry
+from .formatting import KIND_META, is_valid_source_url, render_entry
 from .models import ChangeEntry, ChangeKind, EntryStatus
 from .notifications import AdminNotifier
 from .publisher import Publisher
@@ -77,11 +77,11 @@ def create_router(
             await message.answer(
                 "<b>Новая запись</b>\n\n"
                 "<code>/new тип | заголовок | описание | источник | ссылка</code>\n\n"
-                "Ссылка необязательна. Типы доступны в /types."
+                "Ссылка на подтверждающий источник обязательна. Типы доступны в /types."
             )
             return
         parts = [part.strip() for part in raw.split("|", maxsplit=4)]
-        if len(parts) < 4:
+        if len(parts) < 5:
             await message.answer("Не хватает полей. Открой /new и проверь формат.")
             return
         try:
@@ -89,12 +89,15 @@ def create_router(
         except ValueError:
             await message.answer("Неизвестная категория. Доступные значения есть в /types.")
             return
+        if not is_valid_source_url(parts[4]):
+            await message.answer("Нужна полная ссылка на источник с https:// или http://.")
+            return
         entry = ChangeEntry(
             kind=kind,
             title=parts[1][:140],
             summary=parts[2][:2400],
             source_name=parts[3][:120],
-            source_url=parts[4] if len(parts) == 5 and parts[4] else None,
+            source_url=parts[4],
         )
         saved = await repository.add(entry)
         if saved is None:

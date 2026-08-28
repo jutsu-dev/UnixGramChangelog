@@ -43,6 +43,13 @@ def _render_source(source_name: str, source_url: str | None) -> str:
     return safe_name
 
 
+def is_valid_source_url(source_url: str | None) -> bool:
+    if not source_url:
+        return False
+    parsed = urlsplit(source_url)
+    return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
+
+
 def _maybe_trim(text: str, limit: int) -> str:
     if len(text) <= limit:
         return text

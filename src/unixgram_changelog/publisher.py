@@ -6,7 +6,7 @@ from aiogram import Bot
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import Message
 
-from .formatting import plain_entry, render_entry
+from .formatting import is_valid_source_url, plain_entry, render_entry
 from .models import ChangeEntry, EntryStatus
 from .storage import Repository
 
@@ -22,6 +22,8 @@ class Publisher:
     async def publish(self, entry: ChangeEntry) -> Message:
         if entry.id is None:
             raise ValueError("Entry must be stored before publication")
+        if not is_valid_source_url(entry.source_url):
+            raise ValueError("Entry must have a valid source URL before publication")
         try:
             if entry.published_message_id is not None:
                 message = await self.bot.edit_message_text(

@@ -1,4 +1,4 @@
-from unixgram_changelog.formatting import render_entry
+from unixgram_changelog.formatting import is_valid_source_url, render_entry
 from unixgram_changelog.models import ChangeEntry, ChangeKind
 
 
@@ -36,6 +36,8 @@ def test_unsafe_source_scheme_is_not_linked() -> None:
     ))
     assert "javascript:" not in text
     assert "источник: Source" in text
+    assert not is_valid_source_url("javascript:alert(1)")
+    assert is_valid_source_url("https://unixgram.com/changelog/1")
 
 
 def test_long_dynamic_content_stays_within_telegram_limit() -> None:
